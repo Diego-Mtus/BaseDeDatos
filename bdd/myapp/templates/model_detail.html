@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}{{ verbose_name|title }}{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <a href="{% url 'model-list' model_name %}">&larr; Back to list</a>
+    <h1 class="mt-2">{{ verbose_name|title }}</h1>
+    <p class="text-muted mb-0">Record from {{ db_table }}</p>
+  </div>
+
+  <div class="card model-card">
+    <div class="card-body">
+      <dl class="row mb-0">
+        {% for field, value in values %}
+          <dt class="col-sm-3">{{ field.verbose_name|title }}</dt>
+          <dd class="col-sm-9">{{ value }}</dd>
+        {% endfor %}
+      </dl>
+    </div>
+  </div>
+{% endblock %}

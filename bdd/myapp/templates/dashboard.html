@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block content %}
+  <div class="jumbotron bg-white shadow-sm">
+    <h1 class="display-4">Gestor de carnicería</h1>
+    <p class="lead">Controla stock, clientes con crédito, pedidos y abonos desde una sola interfaz.</p>
+    <hr class="my-4" />
+    <div class="d-flex flex-wrap">
+      <a class="btn btn-primary mr-2 mb-2" href="{% url 'clientes-list' %}">Ver clientes</a>
+      <a class="btn btn-primary mr-2 mb-2" href="{% url 'productos-list' %}">Ver stock</a>
+      <a class="btn btn-primary mr-2 mb-2" href="{% url 'pedido-create' %}">Nuevo pedido</a>
+      <a class="btn btn-primary mr-2 mb-2" href="{% url 'producto-create' %}">Nuevo producto</a>
+      <a class="btn btn-success mr-2 mb-2" href="{% url 'abonos-list' %}">Registrar abono</a>
+      <a class="btn btn-warning mr-2 mb-2" href="{% url 'alertas-credito' %}">Revisar alertas</a>
+    </div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Total clientes</h6><h3>{{ total_clientes }}</h3></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Pedidos</h6><h3>{{ total_pedidos }}</h3></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Abonos</h6><h3>{{ total_abonos }}</h3></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Deuda total</h6><h3>${{ total_deuda }}</h3></div></div></div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Clientes con alerta</h5>
+          <p class="text-muted">Clientes vencidos, sobre el límite o cerca del límite.</p>
+          {% for item in vencidos %}
+            <span class="model-pill">{{ item.nombre }} - Vencido</span>
+          {% endfor %}
+          {% for item in cerca_limite %}
+            <span class="model-pill">{{ item.nombre }} - Cerca del límite</span>
+          {% endfor %}
+          {% for item in excedidos %}
+            <span class="model-pill">{{ item.nombre }} - Excedido</span>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Movimientos recientes</h5>
+          <div class="mb-3">
+            <h6>Pedidos</h6>
+            <ul class="list-unstyled mb-0">
+              {% for pedido in recent_pedidos %}
+                <li class="mb-2">#{{ pedido.obj.id_pedido }} - {{ pedido.pedido_etiqueta }} - {{ pedido.estado_label }} - {{ pedido.fecha_estimada }}</li>
+              {% empty %}
+                <li>No hay pedidos.</li>
+              {% endfor %}
+            </ul>
+          </div>
+          <div>
+            <h6>Abonos</h6>
+            <ul class="list-unstyled mb-0">
+              {% for abono in recent_abonos %}
+                <li class="mb-2">#{{ abono.id_abono }} - {{ abono.cliente_etiqueta }} - ${{ abono.monto }}</li>
+              {% empty %}
+                <li>No hay abonos.</li>
+              {% endfor %}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

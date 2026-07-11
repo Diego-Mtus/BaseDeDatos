@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Clientes{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <div class="d-flex justify-content-between align-items-start flex-wrap">
+      <div>
+        <h1 class="mt-2">Clientes</h1>
+        <p class="text-muted mb-0">Control de límites, saldos y estado de crédito.</p>
+      </div>
+      <div class="mt-3 mt-md-0">
+        <a class="btn btn-primary" href="{% url 'cliente-create' %}">Nuevo cliente</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-hover bg-white">
+      <thead>
+        <tr>
+          <th>Cliente</th>
+          <th>RUT</th>
+          <th>Tipo</th>
+          <th>Límite</th>
+          <th>Saldo</th>
+          <th>Restante</th>
+          <th>Fecha límite</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for cliente in clientes %}
+          <tr>
+            <td><a href="{% url 'cliente-detail' cliente.obj.rut %}">{{ cliente.nombre }}</a></td>
+            <td>{{ cliente.obj.rut }}</td>
+            <td>{{ cliente.tipo }}</td>
+            <td>${{ cliente.obj.limite_credito }}</td>
+            <td>${{ cliente.obj.saldo_deudor }}</td>
+            <td>${{ cliente.saldo_restante }}</td>
+            <td>{{ cliente.obj.fecha_limite|default:"Sin fecha" }}</td>
+            <td>{{ cliente.estado_financiero }}</td>
+          </tr>
+        {% empty %}
+          <tr><td colspan="8">No hay clientes.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

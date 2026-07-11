@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}Abonos{% endblock %}
+{% block content %}
+  <h1 class="mb-4">Registrar abono</h1>
+
+  {% if saved %}
+    <div class="alert alert-success">Abono registrado correctamente.</div>
+  {% endif %}
+
+  <div class="row">
+    <div class="col-lg-5 mb-4">
+      <div class="card model-card">
+        <div class="card-body">
+          <h5 class="card-title">Nuevo abono</h5>
+          <form method="post">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button class="btn btn-success" type="submit">Guardar abono</button>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-7 mb-4">
+      <div class="card model-card">
+        <div class="card-body">
+          <h5 class="card-title">Abonos recientes</h5>
+          <table class="table table-sm">
+            <thead>
+              <tr><th>ID</th><th>Cliente</th><th>Monto</th><th>Fecha</th><th>Empleado</th></tr>
+            </thead>
+            <tbody>
+              {% for abono in abonos %}
+                <tr>
+                  <td>{{ abono.id_abono }}</td>
+                  <td>{{ abono.cliente_etiqueta }}</td>
+                  <td>${{ abono.monto }}</td>
+                  <td>{{ abono.fecha }}</td>
+                  <td>{{ abono.empleado_etiqueta }}</td>
+                </tr>
+              {% empty %}
+                <tr><td colspan="5">Sin abonos.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

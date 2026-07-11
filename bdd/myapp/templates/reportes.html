@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+{% block title %}Reportes{% endblock %}
+{% block content %}
+  <h1 class="mb-4">Reportes</h1>
+
+  <div class="row mb-4">
+    <div class="col-md-4 mb-3"><div class="card model-card"><div class="card-body"><h6>Total clientes</h6><h3>{{ total_clientes }}</h3></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card model-card"><div class="card-body"><h6>Total pedidos</h6><h3>{{ total_pedidos }}</h3></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card model-card"><div class="card-body"><h6>Total abonos</h6><h3>{{ total_abonos }}</h3></div></div></div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-4 mb-3"><div class="card model-card"><div class="card-body"><h6>Crédito vendido</h6><h3>${{ credito_total }}</h3></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card model-card"><div class="card-body"><h6>Pagos recibidos</h6><h3>${{ abonos_total }}</h3></div></div></div>
+    <div class="col-md-4 mb-3"><div class="card model-card"><div class="card-body"><h6>Deuda actual</h6><h3>${{ deuda_total }}</h3></div></div></div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Créditos recientes</h5>
+          <ul class="list-unstyled mb-0">
+            {% for pedido in creditos %}
+              <li class="mb-2">Pedido #{{ pedido.obj.id_pedido }} - {{ pedido.cliente_etiqueta }} - ${{ pedido.obj.total_bruto }}</li>
+            {% empty %}
+              <li>No hay créditos.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Abonos recientes</h5>
+          <ul class="list-unstyled mb-0">
+            {% for abono in abonos %}
+              <li class="mb-2">#{{ abono.id_abono }} - {{ abono.cliente_etiqueta }} - ${{ abono.monto }} - {{ abono.fecha }}</li>
+            {% empty %}
+              <li>No hay abonos.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

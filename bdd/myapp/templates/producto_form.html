@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}{% if mode == 'edit' %}Editar producto{% else %}Nuevo producto{% endif %}{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <a href="{% url 'productos-list' %}">&larr; Volver al stock</a>
+    <h1 class="mt-2">{% if mode == 'edit' %}Editar producto{% else %}Nuevo producto{% endif %}</h1>
+    <p class="text-muted mb-0">La base actual guarda SKU, nombre, precio, si es a granel y su categoría. El stock se calcula desde los lotes y las ventas.</p>
+  </div>
+
+  {% if resumen %}
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3">
+      <div class="card model-card">
+        <div class="card-body"><h6>Stock Disp.</h6><h4>{{ resumen.stock_disponible }}</h4></div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card model-card">
+        <div class="card-body"><h6>Vendidos mes</h6><h4>{{ resumen.vendido_mes }}</h4></div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card model-card">
+        <div class="card-body">
+          <h6>Ubicación / Prov</h6>
+          <div style="font-size: 0.8rem; line-height: 1.1;">
+            <div class="fw-bold text-primary">{{ resumen.ubicacion }}</div>
+            <div class="text-muted">{{ resumen.proveedor }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="col-md-3 mb-3">
+      <div class="card model-card">
+        <div class="card-body"><h6>Vencimiento</h6><h4>{{ resumen.fecha_vencimiento_cercana|default:"-" }}</h4></div>
+      </div>
+    </div>
+  </div>
+{% endif %}
+
+  <form method="post" class="card model-card">
+    {% csrf_token %}
+    <div class="card-body">
+      <div class="row">
+        <div class="col-md-6 form-group">
+          <label for="id_sku">SKU</label>
+          {{ form.sku }}
+          {% for error in form.sku.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_nombre">Nombre</label>
+          {{ form.nombre }}
+          {% for error in form.nombre.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_precio">Precio</label>
+          {{ form.precio }}
+          {% for error in form.precio.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group d-flex align-items-center">
+          <div class="form-check mt-4">
+            {{ form.es_granel }}
+            <label class="form-check-label" for="id_es_granel">{{ form.es_granel.label|default:"Es a granel" }}</label>
+          </div>
+        </div>
+
+        <div class="col-md-6 form-group">
+          <label for="id_id_bodega">{{ form.id_bodega.label }}</label>
+          {{ form.id_bodega }}
+          {% for error in form.id_bodega.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_cantidad_stock">{{ form.cantidad_stock.label }}</label>
+          {{ form.cantidad_stock }}
+          {% for error in form.cantidad_stock.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-12 form-group">
+          <label for="id_categorias">{{ form.categorias.label }}</label>
+          {{ form.categorias }}
+          <small class="text-muted d-block">Mantén presionado Ctrl (o Cmd en Mac) para seleccionar varias categorías.</small>
+          {% for error in form.categorias.errors %}
+            <small class="text-danger d-block">{{ error }}</small>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
+        <button type="submit" class="btn btn-primary">Guardar</button>
+        
+        {% if mode == 'edit' %}
+          <button type="submit" name="delete" class="btn btn-link text-danger p-0 m-0 align-baseline" style="text-decoration: underline;" onclick="return confirm('¿Está seguro de que desea eliminar este producto? Esta acción no se puede deshacer.');">
+            Eliminar producto
+          </button>
+        {% endif %}
+      </div>
+    </div>
+  </form>
+{% endblock %}

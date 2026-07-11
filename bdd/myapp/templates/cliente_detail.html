@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Cliente{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <a href="{% url 'clientes-list' %}">&larr; Volver a clientes</a>
+    <h1 class="mt-2">{{ nombre }}</h1>
+    <p class="text-muted mb-0">RUT: {{ cliente.rut }}</p>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Límite</h6><h4>${{ cliente.limite_credito }}</h4></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Saldo</h6><h4>${{ cliente.saldo_deudor }}</h4></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Restante</h6><h4>${{ resumen.saldo_restante }}</h4></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Estado</h6><h4>{{ resumen.estado_financiero }}</h4></div></div></div>
+  </div>
+
+  <div class="card model-card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Información de contacto</h5>
+      <p class="mb-1"><strong>Teléfono:</strong> {{ cliente.fono_contacto|default:"-" }}</p>
+      <p class="mb-1"><strong>Email:</strong> {{ cliente.email|default:"-" }}</p>
+      <p class="mb-1"><strong>Fecha límite:</strong> {{ cliente.fecha_limite|default:"Sin fecha" }}</p>
+      <p class="mb-0"><strong>Estado de crédito:</strong> {{ cliente.id_estado.nombre_estado }}</p>
+    </div>
+  </div>
+
+  <div class="row">
+    <div class="col-lg-6 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Pedidos</h5>
+          <ul class="list-unstyled mb-0">
+            {% for pedido in pedidos %}
+              <li class="mb-3">
+                <a href="{% url 'pedido-detail' pedido.obj.id_pedido %}">Pedido #{{ pedido.obj.id_pedido }}</a>
+                <div class="text-muted">{{ pedido.obj.fecha_de_emision }} - ${{ pedido.obj.total_bruto }} - Crédito: {{ pedido.es_credito }}</div>
+              </li>
+            {% empty %}
+              <li>No hay pedidos.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5 class="card-title">Abonos</h5>
+          <a class="btn btn-sm btn-success mb-3" href="{% url 'abonos-list' %}">Registrar abono</a>
+          <ul class="list-unstyled mb-0">
+            {% for abono in abonos %}
+              <li class="mb-3">#{{ abono.id_abono }} - ${{ abono.monto }} - {{ abono.fecha }} - {{ abono.metodo_pago }}</li>
+            {% empty %}
+              <li>No hay abonos.</li>
+            {% endfor %}
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

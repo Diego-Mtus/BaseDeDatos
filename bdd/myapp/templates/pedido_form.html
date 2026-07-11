@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Nuevo pedido{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <a href="{% url 'pedidos-list' %}">&larr; Volver a pedidos</a>
+    <h1 class="mt-2">Nuevo pedido</h1>
+    <p class="text-muted mb-0">Seleccione cliente, empleado, estado y agregue una o más líneas de producto.</p>
+  </div>
+
+  {% if form.non_field_errors %}
+    <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+  {% endif %}
+  {% if formset.non_form_errors %}
+    <div class="alert alert-danger">{{ formset.non_form_errors }}</div>
+  {% endif %}
+
+  <form method="post" id="pedido-form">
+    {% csrf_token %}
+    <div class="card model-card mb-4">
+      <div class="card-body">
+        <div class="row">
+          <div class="col-md-6 form-group">
+            <label for="id_rut_cliente">Cliente</label>
+            {{ form.rut_cliente }}
+            {% for error in form.rut_cliente.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+          </div>
+          <div class="col-md-6 form-group">
+            <label for="id_id_empleado">Empleado</label>
+            {{ form.id_empleado }}
+            {% for error in form.id_empleado.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+          </div>
+          <div class="col-md-6 form-group">
+            <label for="id_estado">Estado</label>
+            {{ form.estado }}
+            {% for error in form.estado.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+          </div>
+          <div class="col-md-6 form-group d-flex align-items-center">
+            <div class="form-check mt-4">
+              {{ form.es_credito }}
+              <label class="form-check-label" for="id_es_credito">{{ form.es_credito.label }}</label>
+              {% for error in form.es_credito.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card model-card mb-4">
+      <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center flex-wrap mb-3">
+          <div>
+            <h5 class="card-title mb-1">Productos del pedido</h5>
+            <p class="text-muted mb-0">Agrega una o más líneas. El total se actualiza al seleccionar producto o cantidad.</p>
+          </div>
+          <button type="button" class="btn btn-outline-primary mt-3 mt-md-0" id="add-line-btn">Agregar línea</button>
+        </div>
+        {{ formset.management_form }}
+        <div id="pedido-lines">
+          {% for linea in formset %}
+            <div class="border rounded p-3 mb-3 bg-light pedido-line">
+              <div class="d-flex justify-content-between align-items-center mb-3">
+                <h6 class="mb-0">Línea {{ forloop.counter }}</h6>
+                <button type="button" class="btn btn-sm btn-outline-danger remove-line-btn">Eliminar línea</button>
+              </div>
+              <div class="row">
+                <div class="col-md-8 form-group">
+                  <label>{{ linea.sku.label }}</label>
+                  {{ linea.sku }}
+                  {% for error in linea.sku.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+                </div>
+                <div class="col-md-4 form-group">
+                  <label>{{ linea.cantidad.label }}</label>
+                  {{ linea.cantidad }}
+                  {% for error in linea.cantidad.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+                </div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+        <template id="empty-line-template">
+          <div class="border rounded p-3 mb-3 bg-light pedido-line">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+              <h6 class="mb-0">Línea __num__</h6>
+              <button type="button" class="btn btn-sm btn-outline-danger remove-line-btn">Eliminar línea</button>
+            </div>
+            <div class="row">
+              <div class="col-md-8 form-group">
+                <label for="id_lineas-__prefix__-sku">{{ formset.empty_form.sku.label }}</label>
+                {{ formset.empty_form.sku }}
+              </div>
+              <div class="col-md-4 form-group">
+                <label for="id_lineas-__prefix__-cantidad">{{ formset.empty_form.cantidad.label }}</label>
+                {{ formset.empty_form.cantidad }}
+              </div>
+            </div>
+          </div>
+        </template>
+        <div class="alert alert-dark d-flex justify-content-between align-items-center mb-0">
+          <span>Total en vivo</span>
+          <strong id="pedido-total">$0</strong>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" class="btn btn-primary">Guardar pedido</button>
+  </form>
+
+  {{ producto_precios|json_script:"producto-precios" }}
+  <script>
+    (function () {
+      const priceMap = JSON.parse(document.getElementById('producto-precios').textContent);
+      const linesContainer = document.getElementById('pedido-lines');
+      const totalForms = document.getElementById('id_lineas-TOTAL_FORMS');
+      const addBtn = document.getElementById('add-line-btn');
+      const totalLabel = document.getElementById('pedido-total');
+      const template = document.getElementById('empty-line-template').innerHTML;
+
+      function formatMoney(value) {
+        return '$' + new Intl.NumberFormat('es-CL').format(Math.round(value));
+      }
+
+      function recalcTotal() {
+        let total = 0;
+        linesContainer.querySelectorAll('.pedido-line').forEach((row) => {
+          const skuSelect = row.querySelector('select[name$="-sku"]');
+          const qtyInput = row.querySelector('input[name$="-cantidad"]');
+          if (!skuSelect || !qtyInput) return;
+          const price = parseFloat(priceMap[skuSelect.value] || 0);
+          const qty = parseFloat(qtyInput.value || 0);
+          if (price && qty) {
+            total += price * qty;
+          }
+        });
+        totalLabel.textContent = formatMoney(total);
+      }
+
+      function bindRow(row) {
+        const skuSelect = row.querySelector('select[name$="-sku"]');
+        const qtyInput = row.querySelector('input[name$="-cantidad"]');
+        const removeBtn = row.querySelector('.remove-line-btn');
+        if (skuSelect) skuSelect.addEventListener('change', recalcTotal);
+        if (qtyInput) qtyInput.addEventListener('input', recalcTotal);
+        if (removeBtn) {
+          removeBtn.addEventListener('click', function () {
+            if (linesContainer.querySelectorAll('.pedido-line').length === 1) {
+              skuSelect.value = '';
+              qtyInput.value = '';
+              recalcTotal();
+              return;
+            }
+            row.remove();
+            reindexRows();
+            recalcTotal();
+          });
+        }
+      }
+
+      function reindexRows() {
+        const rows = Array.from(linesContainer.querySelectorAll('.pedido-line'));
+        totalForms.value = rows.length;
+        rows.forEach((row, index) => {
+          row.querySelector('h6').textContent = 'Línea ' + (index + 1);
+          row.querySelectorAll('input, select, textarea, label').forEach((element) => {
+            if (element.name) {
+              element.name = element.name.replace(/lineas-\d+-/g, 'lineas-' + index + '-');
+            }
+            if (element.id) {
+              element.id = element.id.replace(/lineas-\d+-/g, 'lineas-' + index + '-');
+            }
+            if (element.getAttribute && element.getAttribute('for')) {
+              element.setAttribute('for', element.getAttribute('for').replace(/lineas-\d+-/g, 'lineas-' + index + '-'));
+            }
+          });
+        });
+      }
+
+      linesContainer.querySelectorAll('.pedido-line').forEach(bindRow);
+
+      addBtn.addEventListener('click', function () {
+        const index = parseInt(totalForms.value, 10);
+        const html = template.replace(/__prefix__/g, index).replace(/__num__/g, index + 1);
+        linesContainer.insertAdjacentHTML('beforeend', html);
+        const newRow = linesContainer.lastElementChild;
+        bindRow(newRow);
+        totalForms.value = index + 1;
+        recalcTotal();
+      });
+
+      recalcTotal();
+    })();
+  </script>
+{% endblock %}

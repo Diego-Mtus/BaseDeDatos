@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Alertas de crédito{% endblock %}
+{% block content %}
+  <h1 class="mb-4">Alertas de crédito</h1>
+
+  <div class="row">
+    <div class="col-lg-4 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5>Vencidos</h5>
+          {% for item in vencidos %}
+            <div class="mb-2"><a href="{% url 'cliente-detail' item.obj.rut %}">{{ item.nombre }}</a> - {{ item.dias_vencido }} días</div>
+          {% empty %}
+            <p class="mb-0">No hay clientes vencidos.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5>Cerca del límite</h5>
+          {% for item in cerca_limite %}
+            <div class="mb-2"><a href="{% url 'cliente-detail' item.obj.rut %}">{{ item.nombre }}</a> - Restante ${{ item.saldo_restante }}</div>
+          {% empty %}
+            <p class="mb-0">Sin alertas cercanas al límite.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4 mb-4">
+      <div class="card model-card h-100">
+        <div class="card-body">
+          <h5>Excedidos</h5>
+          {% for item in excedidos %}
+            <div class="mb-2"><a href="{% url 'cliente-detail' item.obj.rut %}">{{ item.nombre }}</a> - Saldo ${{ item.obj.saldo_deudor }}</div>
+          {% empty %}
+            <p class="mb-0">No hay clientes excedidos.</p>
+          {% endfor %}
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

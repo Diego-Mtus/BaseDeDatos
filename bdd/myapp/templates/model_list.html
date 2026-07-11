@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ verbose_name_plural|title }}{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <a href="{% url 'home' %}">&larr; Back to models</a>
+    <h1 class="mt-2">{{ verbose_name_plural|title }}</h1>
+    <p class="text-muted mb-0">Browse rows from the {{ db_table }} table.</p>
+  </div>
+
+  <div class="table-responsive">
+    <table class="table table-striped table-hover bg-white">
+      <thead>
+        <tr>
+          <th>Details</th>
+          {% for field in fields %}
+            <th>{{ field.verbose_name|title }}</th>
+          {% endfor %}
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in rows %}
+          <tr>
+            <td>
+              <a class="btn btn-sm btn-outline-primary" href="{% url 'model-detail' model_name row.token %}">Open</a>
+            </td>
+            {% for value in row.values %}
+              <td>{{ value }}</td>
+            {% endfor %}
+          </tr>
+        {% empty %}
+          <tr>
+            <td colspan="{{ fields|length|add:1 }}">No rows found.</td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+{% endblock %}

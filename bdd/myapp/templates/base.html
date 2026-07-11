@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>
+      {% block title %}
+        Django App
+      {% endblock %}
+    </title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" />
+    <style>
+      body {
+        background: linear-gradient(180deg, rgba(122, 24, 24, 0.04), rgba(122, 24, 24, 0.01)), #f9f3ee;
+        color: #2c1f1f;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      }
+      .navbar-brand {
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .page-shell {
+        padding: 2rem 0 3rem;
+      }
+      .table thead th {
+        border-top: 0;
+      }
+      .model-card {
+        border: 1px solid rgba(122, 24, 24, 0.12);
+        box-shadow: 0 8px 30px rgba(77, 37, 37, 0.08);
+        border-top: 4px solid #7a1818;
+        background: #fffdfb;
+      }
+      .model-pill {
+        display: inline-block;
+        padding: 0.35rem 0.7rem;
+        border-radius: 999px;
+        background: #f5d8d1;
+        color: #6b1a1a;
+        font-size: 0.875rem;
+        margin: 0 0.35rem 0.35rem 0;
+      }
+      .navbar-dark.bg-primary {
+        background: linear-gradient(90deg, #5c1515, #7a1818) !important;
+      }
+      .btn-primary,
+      .btn-success,
+      .btn-warning,
+      .btn-outline-primary {
+        border-radius: 999px;
+      }
+      .btn-primary,
+      .btn-success {
+        background: #7a1818;
+        border-color: #7a1818;
+      }
+      .btn-primary:hover,
+      .btn-success:hover {
+        background: #5c1515;
+        border-color: #5c1515;
+      }
+      .btn-outline-primary {
+        color: #7a1818;
+        border-color: #7a1818;
+      }
+      .btn-outline-primary:hover {
+        background: #7a1818;
+        border-color: #7a1818;
+      }
+      code {
+        color: #7a1818;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+      <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">Carnicería Alimentos Bío-Bío</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#mainNav" aria-controls="mainNav" aria-expanded="false" aria-label="Toggle navigation"><span class="navbar-toggler-icon"></span></button>
+        <div class="collapse navbar-collapse" id="mainNav">
+          <ul class="navbar-nav mr-auto ml-lg-3">
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'clientes-list' %}">Clientes</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'pedidos-list' %}">Pedidos</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'productos-list' %}">Stock</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'abonos-list' %}">Abonos</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'alertas-credito' %}">Alertas</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{% url 'reportes' %}">Reportes</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+    <main class="container page-shell">
+      {% block content %}
+      {% endblock %}
+    </main>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>

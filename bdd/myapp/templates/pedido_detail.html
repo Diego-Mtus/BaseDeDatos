@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Pedido{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <a href="{% url 'pedidos-list' %}">&larr; Volver a pedidos</a>
+    <h1 class="mt-2">Pedido #{{ obj.id_pedido }}</h1>
+    <p class="text-muted mb-0">Cliente: {{ cliente_etiqueta }}</p>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Fecha</h6><h5>{{ obj.fecha_de_emision }}</h5></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Estado</h6><h5>{{ estado_label }}</h5></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Entrega estimada</h6><h5>{{ fecha_estimada }}</h5></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Total</h6><h5>${{ obj.total_bruto }}</h5></div></div></div>
+    <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Crédito</h6><h5>{% if obj.es_credito %}Sí{% else %}No{% endif %}</h5></div></div></div>
+  </div>
+
+  <div class="card model-card mb-4">
+    <div class="card-body">
+      <h5 class="card-title">Detalle de productos</h5>
+      <table class="table table-sm mb-0">
+        <thead>
+          <tr>
+            <th>SKU</th>
+            <th>Producto</th>
+            <th>Cantidad</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for linea in lineas %}
+            <tr>
+              <td>{{ linea.sku.sku }}</td>
+              <td>{{ linea.sku.nombre }}</td>
+              <td>{{ linea.cantidad }}</td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="3">Sin líneas de detalle.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card model-card">
+    <div class="card-body">
+      <h5 class="card-title">Documento tributario</h5>
+      {% if documento %}
+        <p class="mb-1"><strong>Documento:</strong> {{ documento.tipo_documento }} #{{ documento.folio }}</p>
+        <p class="mb-1"><strong>Emisión:</strong> {{ documento.fecha_emision }}</p>
+        <p class="mb-0"><strong>Empleado:</strong> {{ documento.id_empleado.nombre }} {{ documento.id_empleado.apellido }}</p>
+      {% else %}
+        <p class="mb-0">No existe documento tributario asociado.</p>
+      {% endif %}
+    </div>
+  </div>
+{% endblock %}

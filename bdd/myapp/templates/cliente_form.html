@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+{% block title %}Nuevo cliente{% endblock %}
+{% block content %}
+  <div class="mb-4">
+    <a href="{% url 'clientes-list' %}">&larr; Volver a clientes</a>
+    <h1 class="mt-2">Nuevo cliente</h1>
+    <p class="text-muted mb-0">Seleccione si el cliente es persona o empresa y complete sus datos específicos.</p>
+  </div>
+
+  {% if form.errors %}
+    <div class="alert alert-danger">
+      <strong>Corrige los errores del formulario para continuar:</strong>
+      <ul class="mb-0 mt-2">
+        {% for error in form.non_field_errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+        {% for field in form %}
+          {% if field.errors %}
+            <li><strong>{{ field.label }}:</strong> {{ field.errors|striptags }}</li>
+          {% endif %}
+        {% endfor %}
+      </ul>
+    </div>
+  {% endif %}
+
+  <form method="post" class="card model-card">
+    {% csrf_token %}
+    <div class="card-body">
+      <div class="form-group">
+        <label for="id_tipo_cliente">{{ form.tipo_cliente.label }}</label>
+        {{ form.tipo_cliente }}
+        {% for error in form.tipo_cliente.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+      </div>
+
+      <div class="row">
+        <div class="col-md-6 form-group">
+          <label for="id_rut">RUT</label>
+          {{ form.rut }}
+          {% for error in form.rut.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_fono_contacto">Teléfono</label>
+          {{ form.fono_contacto }}
+          {% for error in form.fono_contacto.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_email">Email</label>
+          {{ form.email }}
+          {% for error in form.email.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_limite_credito">Límite de crédito</label>
+          {{ form.limite_credito }}
+          {% for error in form.limite_credito.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_saldo_deudor">Saldo deudor</label>
+          {{ form.saldo_deudor }}
+          {% for error in form.saldo_deudor.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_fecha_limite">Fecha límite</label>
+          {{ form.fecha_limite }}
+          {% for error in form.fecha_limite.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="col-md-6 form-group">
+          <label for="id_id_estado">Estado de cuenta</label>
+          {{ form.id_estado }}
+          {% for error in form.id_estado.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+      </div>
+
+      <div id="persona-fields" class="border rounded p-3 mb-3 bg-light">
+        <h5 class="mb-3">Datos de persona</h5>
+        <div class="form-group">
+          <label for="id_nombre">Nombre</label>
+          {{ form.nombre }}
+          {% for error in form.nombre.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="form-group mb-0">
+          <label for="id_apellido">Apellido</label>
+          {{ form.apellido }}
+          {% for error in form.apellido.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+      </div>
+
+      <div id="empresa-fields" class="border rounded p-3 mb-3 bg-light">
+        <h5 class="mb-3">Datos de empresa</h5>
+        <div class="form-group">
+          <label for="id_razon_social">Razón social</label>
+          {{ form.razon_social }}
+          {% for error in form.razon_social.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+        <div class="form-group mb-0">
+          <label for="id_giro">Giro</label>
+          {{ form.giro }}
+          {% for error in form.giro.errors %}<small class="text-danger d-block">{{ error }}</small>{% endfor %}
+        </div>
+      </div>
+
+      <button type="submit" class="btn btn-primary">Guardar cliente</button>
+    </div>
+  </form>
+
+  <script>
+    (function () {
+      const tipo = document.getElementById('id_tipo_cliente');
+      const persona = document.getElementById('persona-fields');
+      const empresa = document.getElementById('empresa-fields');
+
+      function toggleFields() {
+        const value = tipo.value;
+        const showPersona = value === 'persona';
+        const showEmpresa = value === 'empresa';
+
+        persona.style.display = showPersona ? 'block' : 'none';
+        empresa.style.display = showEmpresa ? 'block' : 'none';
+
+        // Modificación: Actualizar el required y setear el mensaje personalizado en español
+        persona.querySelectorAll('input').forEach((input) => {
+          input.required = showPersona;
+          if (!showPersona) {
+            input.setCustomValidity(''); // Limpiar si no se usa
+          }
+        });
+        
+        empresa.querySelectorAll('input').forEach((input) => {
+          input.required = showEmpresa;
+          if (!showEmpresa) {
+            input.setCustomValidity(''); // Limpiar si no se usa
+          }
+        });
+      }
+
+      // Escuchar el evento invalid para cambiar el texto nativo al español antes de mostrar la burbuja
+      document.querySelectorAll('input, select').forEach(input => {
+        input.addEventListener('invalid', function() {
+          if (this.validity.valueMissing) {
+            this.setCustomValidity('Este campo es obligatorio.');
+          } else {
+            this.setCustomValidity('');
+          }
+        });
+
+        // Limpiar el error cuando el usuario empiece a escribir
+        input.addEventListener('input', function() {
+          this.setCustomValidity('');
+        });
+      });
+
+      tipo.addEventListener('change', toggleFields);
+      toggleFields();
+    })();
+  </script>
+{% endblock %}
