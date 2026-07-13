@@ -1,0 +1,73 @@
+{% extends "base.html" %}
+{% block title %}Procesar ventas pendientes{% endblock %}
+{% block content %}
+<div class="container mt-4" style="max-width: 800px;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Procesar ventas pendientes</h1>
+    </div>
+
+    {% if messages %}
+    {% for message in messages %}
+        {% if message.tags == 'error' %}
+        <div class="alert 
+            {% if message.tags == 'error' %}alert-danger border-start border-danger border-4 shadow-sm{% else %}alert-{{ message.tags }}{% endif %} 
+            alert-dismissible fade show" role="alert">
+            
+            <div class="d-flex align-items-center">
+                <i class="bi bi-exclamation-octagon-fill me-2 fs-4"></i>
+                <div>
+                    <strong>{{ message }}</strong>
+                </div>
+            </div>
+            
+        </div>
+        {% endif %}
+    {% endfor %}
+    {% endif %}
+
+    {% for pedido in pedidos %}
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-body p-4">
+            <div class="d-flex justify-content-between align-items-start mb-3">
+                <div>
+                    <h5 class="mb-1">Pedido #{{ pedido.id_pedido }}</h5>
+                    <small class="text-muted">Cliente: {{ pedido.rut_cliente }}</small>
+                </div>
+                <div class="text-end">
+                    <span class="h5">${{ pedido.total_bruto|floatformat:0 }}</span>
+                </div>
+            </div>
+
+            <table class="table table-borderless table-sm mb-4">
+                <thead class="text-muted small text-uppercase">
+                    <tr>
+                        <th>Producto</th>
+                        <th class="text-end">Cantidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for linea in pedido.pedidocontieneproducto_set.all %}
+                    <tr>
+                        <td class="py-2">{{ linea.sku.nombre }}</td>
+                        <td class="py-2 text-end">{{ linea.cantidad }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <form action="{% url 'aprobar-pedido' pedido.id_pedido %}" method="post">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-outline-success btn-sm w-100">
+                    Confirmar y actualizar inventario
+                </button>
+            </form>
+        </div>
+    </div>
+    {% empty %}
+        <div class="text-center py-5 text-muted">
+            <i class="bi bi-check-circle" style="font-size: 2rem;"></i>
+            <p>No hay ventas pendientes por procesar.</p>
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}

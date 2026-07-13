@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Ficha de Proveedor{% endblock %}
+{% block content %}
+<div class="container mt-4" style="max-width: 600px;">
+    <div class="mb-4">
+        <a href="{% url 'stock-list' %}" class="text-decoration-none text-muted">
+            &larr; Volver al inventario
+        </a>
+    </div>
+
+    <div class="mb-4">
+        <h1 class="h3">Información del Proveedor</h1>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <h5 class="card-title text-primary mb-4">{{ proveedor.nombre }}</h5>
+            
+            <div class="row mb-3">
+                <div class="col-sm-4 text-muted">RUT:</div>
+                <div class="col-sm-8 fw-bold">{{ proveedor.rut }}</div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-4 text-muted">Nombre:</div>
+                <div class="col-sm-8 fw-bold">{{ proveedor.nombre }}</div>
+            </div>
+
+            <div class="row mb-3">
+                <div class="col-sm-4 text-muted">Fono contacto:</div>
+                <div class="col-sm-8 fw-bold">{{ proveedor.fono_contacto|default:"No registrado" }}</div>
+            </div>
+
+            <div class="row mb-0">
+                <div class="col-sm-4 text-muted">Email:</div>
+                <div class="col-sm-8 fw-bold">{{ proveedor.email|default:"No registrado" }}</div>
+            </div>
+        </div>
+
+        <div class="card shadow-sm border-0">
+            <div class="card-body p-4">
+                <div class="mt-4 pt-3 border-top">
+                    <a href="{% url 'llegada-stock' %}" class="btn btn-primary w-100">
+                        <i class="bi bi-plus-circle"></i> Registrar llegada de stock
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

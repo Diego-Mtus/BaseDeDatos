@@ -23,12 +23,18 @@ from .models import (
     PedidoContieneProducto,
     Producto,
     ProveedorSuministraProducto,
-    BodegaAlmacenaProducto
+    BodegaAlmacenaProducto,
+    Proveedor
 )
 
 
 PK_TOKEN_SALT = "myapp.model-browser"
 
+
+def proveedor_detail(request, rut):
+    proveedor = get_object_or_404(Proveedor, rut=rut)
+    # Aquí puedes agregar lógica adicional, como listar sus productos suministrados
+    return render(request, "proveedor_detail.html", {"proveedor": proveedor})
 
 def _cliente_nombre(cliente):
     try:
@@ -689,6 +695,7 @@ def productos_list(request):
     q_proveedor = request.GET.get('proveedor', '').strip()
     q_categoria = request.GET.get('categoria', '').strip() # <-- CAPTURAMOS LA CATEGORÍA
     q_orden = request.GET.get('orden', 'fecha_llegada_desc') # Criterio por defecto
+    ocultar_agotados = request.GET.get('ocultar_agotados') == 'true' # <-- NUEVO
 
     # 2. Construir la consulta base de llegadas
     from django.db.models import F, Q
@@ -749,12 +756,14 @@ def productos_list(request):
         else:
             stock_disponible = cantidad_original_lote
 
+        if ocultar_agotados and stock_disponible <= 0:
+            continue  # Saltar este lote si está agotado y se pidió ocultarlos
+
         lotes_productos.append({
             "obj": producto,
             "ubicacion": ubicacion,
             "origen": origen,
-            "proveedor_obj": llegada.rut_proveedor,
-            "proveedor": llegada.rut_proveedor.nombre if llegada.rut_proveedor else "Sin proveedor",
+            "proveedor": llegada.rut_proveedor,
             "stock_total": cantidad_original_lote,
             "stock_disponible": stock_disponible,
             "fecha_vencimiento_cercana": llegada.fecha_vencimiento_lote,
@@ -792,6 +801,7 @@ def productos_list(request):
         "q_proveedor": q_proveedor,
         "q_categoria": q_categoria, # <-- PASAMOS EL FILTRO ACTIVO
         "q_orden": q_orden,
+        "ocultar_agotados": ocultar_agotados,
     })
 
 def producto_create(request):
@@ -916,3 +926,56 @@ def productos_catalogo_list(request):
         'q_search': q_search,
         'q_categoria': q_categoria, # <-- ENVIAMOS EL FILTRO ACTIVO
     })
+
+def procesar_ventas_del_dia(request):
+    """Vista que lista los pedidos pendientes para que el usuario elija cuál aprobar."""
+    pedidos = Pedido.objects.filter(estado="pendiente").prefetch_related(
+        'pedidocontieneproducto_set__sku'
+    )
+    return render(request, "procesar_ventas.html", {"pedidos": pedidos})
+
+@transaction.atomic
+def aprobar_pedido(request, pedido_id):
+    """Vista que procesa un solo pedido, descuenta stock FEFO y lo aprueba."""
+    if request.method == "POST":
+        pedido = get_object_or_404(Pedido, pk=pedido_id)
+        
+        if pedido.estado == "aprobado":
+            messages.warning(request, "Este pedido ya había sido procesado.")
+            return redirect("procesar-ventas")
+
+        lineas = pedido.pedidocontieneproducto_set.all()
+        
+        # Lógica FEFO de descuento por pedido
+        for linea in lineas:
+            lotes = ProveedorSuministraProducto.objects.filter(
+                sku_producto=linea.sku, cantidad__gt=0
+            ).order_by('fecha_vencimiento_lote')
+            
+            restante = linea.cantidad
+            
+            # Validación rápida: verificar si hay stock total antes de empezar
+            total_disponible = sum(l.cantidad for l in lotes)
+            if total_disponible < restante:
+                messages.error(request, f"Error: Stock insuficiente para {linea.sku.nombre}. Necesita {restante}, disponible {total_disponible}.")
+                return redirect("procesar-ventas")
+
+            # Aplicar descuento
+            for lote in lotes:
+                if restante <= 0: break
+                
+                if lote.cantidad > restante:
+                    lote.cantidad -= restante
+                    lote.save(update_fields=['cantidad'])
+                    restante = 0
+                else:
+                    restante -= lote.cantidad
+                    lote.delete() # Elimina lote si llega a 0
+        
+        # Marcar pedido como aprobado
+        pedido.estado = "aprobado"
+        pedido.save()
+        
+        messages.success(request, f"Pedido #{pedido.id_pedido} procesado correctamente y stock descontado.")
+    
+    return redirect("procesar-ventas")
