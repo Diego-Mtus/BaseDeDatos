@@ -743,18 +743,9 @@ def productos_list(request):
             ubicacion = "No asignado en bodega"
             origen = "Sin origen registrado"
         
-        cantidad_original_lote = llegada.cantidad or 0
-        ventas_pendientes = ventas_por_sku.get(sku_key, 0)
-        
-        if ventas_pendientes > 0:
-            if ventas_pendientes >= cantidad_original_lote:
-                stock_disponible = 0
-                ventas_por_sku[sku_key] -= cantidad_original_lote
-            else:
-                stock_disponible = cantidad_original_lote - ventas_pendientes
-                ventas_por_sku[sku_key] = 0
-        else:
-            stock_disponible = cantidad_original_lote
+        # ELIMINAMOS LA RESTA MATEMÁTICA DOBLE DE VENTAS.
+        # El stock disponible es exactamente la cantidad que queda registrada en el lote de la base de datos.
+        stock_disponible = llegada.cantidad or 0
 
         if ocultar_agotados and stock_disponible <= 0:
             continue  # Saltar este lote si está agotado y se pidió ocultarlos
@@ -763,12 +754,12 @@ def productos_list(request):
             "obj": producto,
             "ubicacion": ubicacion,
             "origen": origen,
-            "proveedor": llegada.rut_proveedor,
-            "stock_total": cantidad_original_lote,
+            "proveedor": llegada.rut_proveedor, # El objeto completo que arreglamos antes
+            "stock_total": llegada.cantidad or 0,
             "stock_disponible": stock_disponible,
             "fecha_vencimiento_cercana": llegada.fecha_vencimiento_lote,
             "fecha_llegada": llegada.fecha,
-            "cantidad_lote": cantidad_original_lote,
+            "cantidad_lote": llegada.cantidad or 0,
         })
     
     # 5. ORDENAMIENTO DE CARA AL USUARIO (Python side)
