@@ -97,15 +97,23 @@ def _cliente_resumen(cliente, today=None):
         tipo = "Empresa" if cliente.clienteempresa else "Persona"
     except ObjectDoesNotExist:
         tipo = "Persona"
+        
+    # Identificar de forma auxiliar si está cerca del límite (90% o más consumido)
+    saldo = cliente.saldo_deudor or 0
+    limite = cliente.limite_credito or 0
+    esta_cerca = False
+    if limite > 0 and saldo >= (limite * 0.90) and saldo <= limite:
+        esta_cerca = True
+
     return {
         "obj": cliente,
         "nombre": _cliente_nombre(cliente),
         "tipo": tipo,
         "estado_financiero": estado_financiero,
+        "esta_cerca_limite": esta_cerca, # <-- Guardamos este indicador clave
         "dias_vencido": (today - cliente.fecha_limite).days if cliente.fecha_limite and cliente.fecha_limite < today else 0,
         "saldo_restante": (cliente.limite_credito or 0) - (cliente.saldo_deudor or 0),
     }
-
 
 def _cliente_queryset():
     return Cliente.objects.select_related("id_estado").all().order_by("rut")
@@ -223,10 +231,11 @@ def _dashboard_context():
     abonos = list(_abono_queryset())
     cliente_resumenes = [_cliente_resumen(cliente, today=today) for cliente in clientes]
     
-    # Filtrados con los nuevos estados establecidos
     morosos = [item for item in cliente_resumenes if item["estado_financiero"] == "Moroso"]
     bloqueados = [item for item in cliente_resumenes if item["estado_financiero"] == "Bloqueado"]
-    vigentes = [item for item in cliente_resumenes if item["estado_financiero"] == "Vigente"]
+    
+    # NUEVO: Filtramos los clientes cerca del límite para el dashboard
+    cerca = [item for item in cliente_resumenes if item["esta_cerca_limite"] and item["estado_financiero"] not in ["Bloqueado", "Moroso"]]
     
     total_deuda = sum((cliente.saldo_deudor or 0) for cliente in clientes)
     total_limite = sum((cliente.limite_credito or 0) for cliente in clientes)
@@ -238,13 +247,12 @@ def _dashboard_context():
         "total_deuda": total_deuda,
         "total_limite": total_limite,
         "total_pagado": total_pagado,
-        "vencidos": morosos[:5],        # Mantiene compatibilidad con las variables de tu plantilla de dashboard
-        "excedidos": bloqueados[:5],    # Mantiene compatibilidad con tu plantilla de dashboard
-        "cerca_limite": [],             # Removido al simplificar a 3 estados
+        "vencidos": morosos[:5],        
+        "excedidos": bloqueados[:5],    
+        "cerca_limite": cerca[:5],      # <-- PASAMOS LOS PRIMEROS 5 A LA PLANTILLA
         "recent_pedidos": [_pedido_summary(pedido) for pedido in pedidos[:5]],
         "recent_abonos": [_abono_summary(abono) for abono in abonos[:5]],
     }
-
 
 def _estado_credito_inicial():
     estado = EstadoCredito.objects.filter(nombre_estado__iexact="Activo").first()
@@ -408,47 +416,14 @@ def cliente_create(request):
     if request.method == "POST":
         form = ClienteCreateForm(request.POST)
         if form.is_valid():
-            rut = form.cleaned_data["rut"].strip()
-            tipo_cliente = form.cleaned_data["tipo_cliente"]
-
-            if Cliente.objects.filter(pk=rut).exists():
-                form.add_error("rut", "Ya existe un cliente con este RUT.")
-            else:
-                with transaction.atomic():
-                    cliente = Cliente.objects.create(
-                        rut=rut,
-                        fono_contacto=form.cleaned_data["fono_contacto"],
-                        email=form.cleaned_data["email"],
-                        limite_credito=form.cleaned_data["limite_credito"],
-                        saldo_deudor=0,
-                        fecha_limite=form.cleaned_data["fecha_limite"],
-                        id_estado=_estado_credito_inicial(),
-                    )
-                    if tipo_cliente == ClienteCreateForm.TIPO_PERSONA:
-                        ClientePersona.objects.create(
-                            rut=cliente,
-                            nombre=form.cleaned_data["nombre"],
-                            apellido=form.cleaned_data["apellido"],
-                        )
-                    else:
-                        ClienteEmpresa.objects.create(
-                            rut=cliente,
-                            razon_social=form.cleaned_data["razon_social"],
-                            giro=form.cleaned_data["giro"],
-                        )
-                messages.success(request, "Cliente creado correctamente.")
-                return redirect("clientes-list")
+            # El save() del formulario ahora guarda todo de forma atómica y segura en la BD
+            cliente = form.save()
+            messages.success(request, f"Cliente {cliente.rut} creado con éxito.")
+            return redirect("clientes-list")
     else:
         form = ClienteCreateForm()
 
-    return render(
-        request,
-        "cliente_form.html",
-        {
-            "form": form,
-        },
-    )
-
+    return render(request, "cliente_form.html", {"form": form})
 
 def cliente_detail(request, rut):
     cliente = get_object_or_404(Cliente.objects.select_related("id_estado"), pk=rut)
@@ -574,13 +549,16 @@ def alertas_credito(request):
     morosos = [item for item in clientes if item["estado_financiero"] == "Moroso"]
     bloqueados = [item for item in clientes if item["estado_financiero"] == "Bloqueado"]
     
+    # NUEVO: Filtramos los que están cerca del límite y que no estén ya bloqueados/morosos
+    cerca = [item for item in clientes if item["esta_cerca_limite"] and item["estado_financiero"] not in ["Bloqueado", "Moroso"]]
+    
     return render(
         request,
         "alertas_credito.html",
         {
-            "vencidos": morosos,       # Reutiliza tus variables de 'alertas_credito.html'
-            "excedidos": bloqueados,   # Reutiliza tus variables de 'alertas_credito.html'
-            "cerca_limite": [],
+            "vencidos": morosos,       
+            "excedidos": bloqueados,   
+            "cerca_limite": cerca,      # <-- PASAMOS LA LISTA REAL A LA PLANTILLA
             "today": today,
         },
     )
@@ -733,12 +711,11 @@ def productos_list(request):
     # 4. Aplicamos el Algoritmo FEFO secuencial
     for llegada in llegadas:
         producto = llegada.sku_producto
-        sku_key = str(producto.sku).strip()
         
-        almacenamiento = BodegaAlmacenaProducto.objects.filter(sku=producto).first()
-        if almacenamiento:
-            ubicacion = f"{almacenamiento.nombre_bodega} ({almacenamiento.ubicacion_bodega})"
-            origen = almacenamiento.nombre_bodega
+        # Leemos la ubicación guardada directamente en el lote
+        if llegada.nombre_bodega and llegada.ubicacion_bodega:
+            ubicacion = f"{llegada.nombre_bodega} ({llegada.ubicacion_bodega})"
+            origen = llegada.nombre_bodega
         else:
             ubicacion = "No asignado en bodega"
             origen = "Sin origen registrado"
@@ -859,6 +836,7 @@ def ingresar_llegada_stock(request):
             # 1. UPSERT DIRECTO EN BODEGA_ALMACENA_PRODUCTO
             # Si se topa con el unique_together, ejecuta la suma de la cantidad.
             with connection.cursor() as cursor:
+                # 1. UPSERT en bodega_almacena_producto (Sigue igual)
                 cursor.execute("""
                     INSERT INTO bodega_almacena_producto (nombre_bodega, ubicacion_bodega, sku, cantidad)
                     VALUES (%s, %s, %s, %s)
@@ -866,17 +844,16 @@ def ingresar_llegada_stock(request):
                     DO UPDATE SET cantidad = bodega_almacena_producto.cantidad + EXCLUDED.cantidad;
                 """, [nombre_b, ubicacion_b, sku_str, cantidad])
                 
-            # 2. UPSERT / INSERT EN PROVEEDOR_SUMINISTRA_PRODUCTO
-            # Como tu modelo exige el campo 'cantidad' obligatorio en esta tabla también, se la inyectamos.
-            # Además usamos ON CONFLICT por si registran el mismo producto del mismo proveedor el mismo día.
-            with connection.cursor() as cursor:
+                # 2. INSERT en proveedor_suministra_producto (¡NUEVO: Guardamos la bodega aquí también!)
                 cursor.execute("""
-                    INSERT INTO proveedor_suministra_producto (rut_proveedor, sku_producto, fecha, fecha_vencimiento_lote, cantidad)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO proveedor_suministra_producto (rut_proveedor, sku_producto, fecha, fecha_vencimiento_lote, cantidad, nombre_bodega, ubicacion_bodega)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     ON CONFLICT (rut_proveedor, sku_producto, fecha)
                     DO UPDATE SET cantidad = proveedor_suministra_producto.cantidad + EXCLUDED.cantidad,
-                                  fecha_vencimiento_lote = EXCLUDED.fecha_vencimiento_lote;
-                """, [rut_str, sku_str, fecha_llegada, fecha_venc, cantidad])
+                                fecha_vencimiento_lote = EXCLUDED.fecha_vencimiento_lote,
+                                nombre_bodega = EXCLUDED.nombre_bodega,
+                                ubicacion_bodega = EXCLUDED.ubicacion_bodega;
+                """, [rut_str, sku_str, fecha_llegada, fecha_venc, cantidad, nombre_b, ubicacion_b])
             
             messages.success(
                 request, 
@@ -927,7 +904,7 @@ def procesar_ventas_del_dia(request):
 
 @transaction.atomic
 def aprobar_pedido(request, pedido_id):
-    """Vista que procesa un solo pedido, descuenta stock FEFO y lo aprueba."""
+    """Vista que procesa un solo pedido, descuenta stock FEFO de lotes y de su respectiva bodega."""
     if request.method == "POST":
         pedido = get_object_or_404(Pedido, pk=pedido_id)
         
@@ -937,36 +914,58 @@ def aprobar_pedido(request, pedido_id):
 
         lineas = pedido.pedidocontieneproducto_set.all()
         
-        # Lógica FEFO de descuento por pedido
         for linea in lineas:
+            # Buscamos lotes con stock disponibles ordenados por FEFO
             lotes = ProveedorSuministraProducto.objects.filter(
                 sku_producto=linea.sku, cantidad__gt=0
             ).order_by('fecha_vencimiento_lote')
             
             restante = linea.cantidad
             
-            # Validación rápida: verificar si hay stock total antes de empezar
             total_disponible = sum(l.cantidad for l in lotes)
             if total_disponible < restante:
                 messages.error(request, f"Error: Stock insuficiente para {linea.sku.nombre}. Necesita {restante}, disponible {total_disponible}.")
                 return redirect("procesar-ventas")
 
-            # Aplicar descuento
+            # Aplicar descuento FEFO
             for lote in lotes:
-                if restante <= 0: break
+                if restante <= 0: 
+                    break
                 
+                # Cantidad que vamos a restar en este paso
+                cantidad_a_descontar = min(lote.cantidad, restante)
+                
+                # -------------------------------------------------------------
+                # DESCUENTO EN BODEGAALMACENAPRODUCTO DE FORMA ESPECÍFICA
+                # -------------------------------------------------------------
+                # Buscamos la fila de la bodega que corresponde a este lote
+                almacenamiento = BodegaAlmacenaProducto.objects.filter(
+                    sku=linea.sku,
+                    nombre_bodega=lote.nombre_bodega,       # Usamos la bodega guardada en el lote
+                    ubicacion_bodega=lote.ubicacion_bodega
+                ).first()
+                
+                if almacenamiento:
+                    almacenamiento.cantidad -= cantidad_a_descontar
+                    if almacenamiento.cantidad <= 0:
+                        almacenamiento.delete()  # Se elimina de la bodega si queda en 0
+                    else:
+                        almacenamiento.save(update_fields=['cantidad'])
+                # -------------------------------------------------------------
+
+                # Descuento en el lote
                 if lote.cantidad > restante:
                     lote.cantidad -= restante
                     lote.save(update_fields=['cantidad'])
                     restante = 0
                 else:
-                    restante -= lote.cantidad
-                    lote.delete() # Elimina lote si llega a 0
+                    restance_temp = lote.cantidad
+                    restante -= restance_temp
+                    lote.delete() # Se elimina el lote si llega a 0
         
-        # Marcar pedido como aprobado
         pedido.estado = "aprobado"
         pedido.save()
         
-        messages.success(request, f"Pedido #{pedido.id_pedido} procesado correctamente y stock descontado.")
+        messages.success(request, f"Pedido #{pedido.id_pedido} procesado correctamente. ¡Sincronizado en lotes y bodegas!")
     
     return redirect("procesar-ventas")

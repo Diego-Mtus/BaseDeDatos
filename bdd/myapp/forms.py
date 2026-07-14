@@ -186,7 +186,7 @@ class ClienteCreateForm(forms.ModelForm):
     def clean_limite_credito(self):
         limite = self.cleaned_data.get("limite_credito")
         if limite is not None and limite < 0:
-            raise forms.ValidationError("El límite de crédito no puede ser un valor negative.")
+            raise forms.ValidationError("El límite de crédito no puede ser un valor negativo.")
         return limite
 
     def clean_saldo_deudor(self):
@@ -215,6 +215,47 @@ class ClienteCreateForm(forms.ModelForm):
 
         return cleaned_data
 
+    # ==========================================
+    # MÉTODO SAVE PERSONALIZADO Y TRANSACCIONAL
+    # ==========================================
+    def save(self, commit=True):
+        from django.db import transaction
+        from .models import ClientePersona, ClienteEmpresa
+
+        # Usamos transaction.atomic para asegurar que se cree el Cliente base
+        # y su correspondiente subtipo al mismo tiempo en la Base de Datos.
+        with transaction.atomic():
+            # 1. Guardamos el objeto principal de la tabla Cliente (incluye saldo_deudor)
+            cliente = super().save(commit=commit)
+            
+            if commit:
+                tipo = self.cleaned_data.get("tipo_cliente")
+                
+                if tipo == "persona":
+                    # Creamos o actualizamos en la tabla cliente_persona
+                    ClientePersona.objects.update_or_create(
+                        rut=cliente,
+                        defaults={
+                            'nombre': self.cleaned_data.get("nombre"),
+                            'apellido': self.cleaned_data.get("apellido"),
+                        }
+                    )
+                    # Eliminamos preventivamente cualquier registro previo de empresa si existía
+                    ClienteEmpresa.objects.filter(rut=cliente).delete()
+                    
+                elif tipo == "empresa":
+                    # Creamos o actualizamos en la tabla cliente_empresa
+                    ClienteEmpresa.objects.update_or_create(
+                        rut=cliente,
+                        defaults={
+                            'razon_social': self.cleaned_data.get("razon_social"),
+                            'giro': self.cleaned_data.get("giro"),
+                        }
+                    )
+                    # Eliminamos preventivamente cualquier registro previo de persona si existía
+                    ClientePersona.objects.filter(rut=cliente).delete()
+                    
+            return cliente
 
 class AbonoCreditoForm(forms.ModelForm):
     rut_cliente = ClienteChoiceField(
@@ -228,9 +269,9 @@ class AbonoCreditoForm(forms.ModelForm):
     metodo_pago = forms.ChoiceField(
         choices=(
             ("efectivo", "Efectivo"),
+            ("debito", "Débito"),
             ("transferencia", "Transferencia"),
-            ("tarjeta", "Tarjeta"),
-            ("cheque", "Cheque"),
+            ("credito", "Crédito"),
         ),
         widget=forms.Select(attrs={"class": "form-control"}),
         label="Método de pago",

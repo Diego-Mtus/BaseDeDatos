@@ -46,6 +46,27 @@ class Cliente(models.Model):
     def __str__(self):
         return f"RUT: {self.rut} - Saldo: ${self.saldo_deudor}"
 
+    # ====================================================================
+    # LÓGICA DE ACTUALIZACIÓN AUTOMÁTICA DE ESTADO (Vigente / Moroso / Bloqueado)
+    # ====================================================================
+    def save(self, *args, **kwargs):
+        from datetime import date
+        
+        # 1. Condición para BLOQUEADO (ID 3): Deuda supera el límite de crédito
+        if (self.saldo_deudor or 0) > (self.limite_credito or 0):
+            self.id_estado_id = 3
+            
+        # 2. Condición para MOROSO (ID 2): Tiene fecha límite de pago y ya venció
+        elif self.fecha_limite and self.fecha_limite < date.today():
+            self.id_estado_id = 2
+            
+        # 3. En cualquier otro caso permanece VIGENTE (ID 1)
+        else:
+            self.id_estado_id = 1
+            
+        # Llamamos al método save original para que persista los cambios en la BD
+        super().save(*args, **kwargs)
+
 
 class ClientePersona(models.Model):
     # Relación uno a uno que actúa como Clave Primaria compartida
@@ -231,14 +252,20 @@ class Proveedor(models.Model):
 
 
 class ProveedorSuministraProducto(models.Model):
+    # Clave primaria para Django (usa rut_proveedor de forma lógica)
     rut_proveedor = models.ForeignKey(Proveedor, models.CASCADE, db_column='rut_proveedor', primary_key=True)
     sku_producto = models.ForeignKey(Producto, models.CASCADE, db_column='sku_producto')
     fecha = models.DateField()
     fecha_vencimiento_lote = models.DateField()
     cantidad = models.IntegerField()
+    
+    # Mantenemos las columnas que componen la FK de Bodega
+    nombre_bodega = models.CharField(max_length=30)
+    ubicacion_bodega = models.CharField(max_length=15)
 
     class Meta:
         db_table = 'proveedor_suministra_producto'
+        # Esto le indica a Django las restricciones de unicidad lógica
         unique_together = (('rut_proveedor', 'sku_producto', 'fecha'),)
 
 

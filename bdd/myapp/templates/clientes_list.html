@@ -38,8 +38,8 @@
           <select name="orden" id="orden" class="form-select">
             <option value="nombre_asc" {% if q_orden == "nombre_asc" %}selected{% endif %}>Nombre: A-Z</option>
             <option value="nombre_desc" {% if q_orden == "nombre_desc" %}selected{% endif %}>Nombre: Z-A</option>
-            <option value="saldo_desc" {% if q_orden == "saldo_desc" %}selected{% endif %}>Saldo: Mayor deuda primero</option>
-            <option value="saldo_asc" {% if q_orden == "saldo_asc" %}selected{% endif %}>Saldo: Menor deuda primero</option>
+            <option value="saldo_desc" {% if q_orden == "saldo_desc" %}selected{% endif %}>Deuda: Mayor deuda primero</option>
+            <option value="saldo_asc" {% if q_orden == "saldo_asc" %}selected{% endif %}>Deuda: Menor deuda primero</option>
           </select>
         </div>
 
@@ -61,7 +61,7 @@
           <th>RUT</th>
           <th>Tipo</th>
           <th>Límite</th>
-          <th>Saldo</th>
+          <th>Deuda</th>
           <th>Restante</th>
           <th>Fecha Límite</th>
           <th>Estado</th>
