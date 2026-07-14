@@ -924,7 +924,13 @@ def aprobar_pedido(request, pedido_id):
             
             total_disponible = sum(l.cantidad for l in lotes)
             if total_disponible < restante:
-                messages.error(request, f"Error: Stock insuficiente para {linea.sku.nombre}. Necesita {restante}, disponible {total_disponible}.")
+                necesita_formateado = f"{float(restante):.1f}"
+                disponible_formateado = f"{float(total_disponible):.1f}"
+                
+                messages.error(
+                    request, 
+                    f"Error: Stock insuficiente para {linea.sku.nombre}. Necesita {necesita_formateado}, disponible {disponible_formateado}."
+                )
                 return redirect("procesar-ventas")
 
             # Aplicar descuento FEFO

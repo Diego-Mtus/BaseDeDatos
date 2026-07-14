@@ -269,9 +269,9 @@ class AbonoCreditoForm(forms.ModelForm):
     metodo_pago = forms.ChoiceField(
         choices=(
             ("efectivo", "Efectivo"),
-            ("debito", "Débito"),
-            ("transferencia", "Transferencia"),
-            ("credito", "Crédito"),
+            ("debito", "Tarjeta de Débito"),
+            ("transferencia", "Transferencia Bancaria"),
+            ("credito", "Crédito / Otro"),
         ),
         widget=forms.Select(attrs={"class": "form-control"}),
         label="Método de pago",
@@ -281,9 +281,35 @@ class AbonoCreditoForm(forms.ModelForm):
         model = AbonoCredito
         fields = ["rut_cliente", "monto", "metodo_pago", "id_empleado"]
         widgets = {
-            "monto": forms.NumberInput(attrs={"class": "form-control", "min": 0}),
+            "monto": forms.NumberInput(attrs={"class": "form-control", "min": 1}), # min 1 para evitar abonos de 0 o negativos
         }
 
+    # ====================================================================
+    # VALIDACIÓN: El abono no puede superar la deuda del cliente
+    # ====================================================================
+    def clean(self):
+        cleaned_data = super().clean()
+        cliente = cleaned_data.get("rut_cliente")
+        monto = cleaned_data.get("monto")
+
+        if cliente and monto is not None:
+            deuda_actual = cliente.saldo_deudor
+
+            # Caso 1: El cliente no tiene deuda (saldo_deudor es 0 o menor)
+            if deuda_actual <= 0:
+                self.add_error(
+                    "monto", 
+                    f"Este cliente no registra deuda actualmente (Deuda: $0)."
+                )
+            
+            # Caso 2: El monto que se intenta abonar es mayor a la deuda
+            elif monto > deuda_actual:
+                self.add_error(
+                    "monto", 
+                    f"El monto a abonar (${monto}) no puede ser mayor que la deuda del cliente (${deuda_actual})."
+                )
+
+        return cleaned_data
 
 class PedidoCreateForm(forms.Form):
     rut_cliente = ClienteChoiceField(
