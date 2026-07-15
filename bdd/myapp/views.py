@@ -1,6 +1,7 @@
 from django.apps import apps
 from django.contrib import messages
 from django.db import transaction, connection
+from django.views.decorators.http import require_POST
 from django.core import signing
 from django.db.models import Max, Sum
 from django.core.exceptions import ObjectDoesNotExist
@@ -30,6 +31,30 @@ from .models import (
 
 PK_TOKEN_SALT = "myapp.model-browser"
 
+@require_POST
+def extender_fecha_cliente_individual(request, rut):
+    # 1. Buscamos al cliente por su RUT
+    cliente = get_object_or_404(Cliente, rut=rut)
+    
+    # 2. Validamos que cumpla las condiciones: sin deuda (0) y estado "Vigente" (ID 1)
+    if cliente.saldo_deudor == 0 and cliente.id_estado_id == 1:
+        # Sumamos 30 días a partir de hoy
+        nueva_fecha = date.today() + timedelta(days=30)
+        cliente.fecha_limite = nueva_fecha
+        cliente.save() # Al guardar, se ejecuta tu lógica automática del modelo
+        
+        messages.success(
+            request, 
+            f"Se ha extendido el plazo de {cliente.rut} hasta el {nueva_fecha.strftime('%d-%m-%Y')}."
+        )
+    else:
+        messages.error(
+            request, 
+            "No se puede extender el plazo: El cliente tiene deuda activa o no se encuentra vigente."
+        )
+        
+    # Redirigimos de vuelta a la ficha del cliente
+    return redirect("cliente-detail", rut=cliente.rut) # Usa el nombre de tu ruta de detalle
 
 def proveedor_detail(request, rut):
     proveedor = get_object_or_404(Proveedor, rut=rut)

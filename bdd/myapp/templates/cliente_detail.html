@@ -7,6 +7,7 @@
     <p class="text-muted mb-0">RUT: {{ cliente.rut }}</p>
   </div>
 
+  {# Tarjetas de Resumen #}
   <div class="row mb-4">
     <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Límite</h6><h4>${{ cliente.limite_credito }}</h4></div></div></div>
     <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Saldo</h6><h4>${{ cliente.saldo_deudor }}</h4></div></div></div>
@@ -14,6 +15,35 @@
     <div class="col-md-3 mb-3"><div class="card model-card"><div class="card-body"><h6>Estado</h6><h4>{{ resumen.estado_financiero }}</h4></div></div></div>
   </div>
 
+  {# Mensajes de Alerta de Django (Éxito / Errores) #}
+  {% if messages %}
+    {% for message in messages %}
+      <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4" role="alert">
+        {{ message }}
+      </div>
+    {% endfor %}
+  {% endif %}
+
+  {# BOTÓN CONDICIONAL: Extender Fecha Límite #}
+  {# Aparece si el saldo deudor es 0 y el id_estado de la FK es 1 (Vigente) #}
+  {% if cliente.saldo_deudor == 0 and cliente.id_estado_id == 1 %}
+    <div class="card border-primary bg-light mb-4 shadow-sm">
+      <div class="card-body d-flex flex-column flex-sm-row justify-content-between align-items-sm-center py-3">
+        <div class="mb-3 mb-sm-0">
+          <h6 class="text-primary mb-1"><i class="bi bi-calendar2-check-fill me-1"></i> Beneficio disponible</h6>
+          <p class="text-muted small mb-0">Este cliente está al día y vigente. Puedes aplazar su fecha límite de pago a un mes desde hoy.</p>
+        </div>
+        <form action="{% url 'extender-fecha-cliente' cliente.rut %}" method="post" class="m-0">
+          {% csrf_token %}
+          <button type="submit" class="btn btn-primary" onclick="return confirm('¿Confirmas extender la fecha límite de este cliente por 1 mes desde hoy?');">
+            <i class="bi bi-calendar-plus me-1"></i> Extender plazo
+          </button>
+        </form>
+      </div>
+    </div>
+  {% endif %}
+
+  {# Información de Contacto #}
   <div class="card model-card mb-4">
     <div class="card-body">
       <h5 class="card-title">Información de contacto</h5>
@@ -24,6 +54,7 @@
     </div>
   </div>
 
+  {# Pedidos y Abonos #}
   <div class="row">
     <div class="col-lg-6 mb-4">
       <div class="card model-card h-100">
